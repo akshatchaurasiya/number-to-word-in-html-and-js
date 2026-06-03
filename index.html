@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Number To Words</title>
+
+<style>
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #f4f7f9;
+    margin: 0;
+    padding: 40px;
+    display: flex;
+    justify-content: center;
+}
+
+.container {
+    width: 100%;
+    max-width: 800px;
+}
+
+h1 {
+    text-align: center;
+    color: #333;
+    margin-bottom: 30px;
+}
+
+input {
+    width: 100%;
+    padding: 15px 20px;
+    font-size: 20px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    outline: none;
+}
+
+input:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 10px rgba(0,123,255,0.2);
+}
+
+.result {
+    margin-top: 30px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.card {
+    background: #fff;
+    padding: 20px 25px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.label {
+    font-weight: 600;
+    color: #555;
+    margin-top: 10px;
+}
+
+.number-format {
+    font-size: 20px;
+    margin-top: 6px;
+    color: #222;
+    word-break: break-all;
+}
+
+.words {
+    font-size: 18px;
+    margin-top: 6px;
+    color: #333;
+    line-height: 1.6;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+    <h1>Number To Words Converter</h1>
+    <input type="text" id="number" placeholder="Enter Number">
+
+    <div class="result">
+        <div class="card" id="indian-box"></div>
+        <div class="card" id="western-box"></div>
+    </div>
+</div>
+
+<script>
+
+const ones = [
+    '', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine',
+    'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen',
+    'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'
+];
+
+const tens = [
+    '', '', 'Twenty', 'Thirty', 'Forty',
+    'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'
+];
+
+function twoDigits(n){
+    n = Number(n);
+    if(n === 0) return '';
+    if(n < 20) return ones[n];
+    return tens[Math.floor(n/10)] + (n % 10 ? ' ' + ones[n % 10] : '');
+}
+
+function threeDigits(n){
+    n = Number(n);
+    let str = '';
+    if(n >= 100){
+        str += ones[Math.floor(n/100)] + ' Hundred';
+        if(n % 100) str += ' And ';
+    }
+    str += twoDigits(n % 100);
+    return str.trim();
+}
+
+// ---------- WESTERN ----------
+const westernUnits = [
+    '', 'Thousand','Million','Billion','Trillion','Quadrillion',
+    'Quintillion','Sextillion','Septillion','Octillion','Nonillion','Decillion'
+];
+
+function westernWords(num){
+    if(num === '0') return 'Zero';
+
+    if(num.length > westernUnits.length * 3) return 'Overflow';
+
+    let groups = [];
+    while(num.length > 0){
+        groups.unshift(num.slice(-3));
+        num = num.slice(0, -3);
+    }
+
+    let result = [];
+    let unitIndex = groups.length - 1;
+
+    groups.forEach(group => {
+        let n = parseInt(group, 10);
+        if(n){
+            let word = threeDigits(n);
+            if(westernUnits[unitIndex]) word += ' ' + westernUnits[unitIndex];
+            result.push(word);
+        }
+        unitIndex--;
+    });
+
+    return result.join(', ');
+}
+
+// ---------- INDIAN ----------
+const indianUnits = [
+    '', 'Thousand','Lakh','Crore','Arab','Kharab','Nil','Padma','Shankh'
+];
+
+function indianWords(num){
+    if(num === '0') return 'Zero';
+
+    const maxDigits = 3 + 2 * (indianUnits.length - 1);
+    if(num.length > maxDigits) return 'Overflow';
+
+    let groups = [];
+    groups.unshift(num.slice(-3));
+    num = num.slice(0, -3);
+
+    while(num.length){
+        groups.unshift(num.slice(-2));
+        num = num.slice(0, -2);
+    }
+
+    let result = [];
+    let unitIndex = groups.length - 1;
+
+    groups.forEach(group => {
+        let n = parseInt(group, 10);
+        if(n){
+            let word;
+            if(unitIndex === 0) word = threeDigits(n);
+            else word = twoDigits(n);
+
+            if(indianUnits[unitIndex]) word += ' ' + indianUnits[unitIndex];
+            result.push(word);
+        }
+        unitIndex--;
+    });
+
+    return result.join(', ');
+}
+
+// ---------- FORMAT ----------
+function indianCommaFormat(num){
+    if(num.length <= 3) return num;
+    let last3 = num.slice(-3);
+    let rest = num.slice(0, -3);
+    rest = rest.replace(/\B(?=(\d{2})+(?!\d))/g, ",");
+    return rest + ',' + last3;
+}
+
+function westernCommaFormat(num){
+    return num.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
+
+// ---------- INPUT ----------
+const input = document.getElementById('number');
+
+input.addEventListener('input', function(){
+    let value = this.value.replace(/\D/g, '');
+
+    if(!value){
+        document.getElementById('indian-box').innerHTML = '';
+        document.getElementById('western-box').innerHTML = '';
+        return;
+    }
+
+    document.getElementById('indian-box').innerHTML =
+`
+<div class="label">Indian Format:</div>
+<div class="number-format">${indianCommaFormat(value)}</div>
+
+<div class="label">Indian Words:</div>
+<div class="words">${indianWords(value)}</div>
+`;
+
+    document.getElementById('western-box').innerHTML =
+`
+<div class="label">Western Format:</div>
+<div class="number-format">${westernCommaFormat(value)}</div>
+
+<div class="label">Western Words:</div>
+<div class="words">${westernWords(value)}</div>
+`;
+});
+</script>
+
+</body>
+</html>
